@@ -71,6 +71,7 @@ public interface RavenRemote : Object
     public abstract bool GetExpanded() throws Error;
     public abstract async void Toggle() throws Error;
     public abstract async void ToggleNotificationsView() throws Error;
+    public abstract async void ReadNotifications() throws Error;
     public abstract async void ToggleAppletView() throws Error;
     public abstract async void Dismiss() throws Error;
 }
@@ -318,6 +319,22 @@ public class BudgieWM : Meta.Plugin
         }
     }
 
+    void on_raven_clear_notifications(Meta.Display display, Meta.Screen screen,
+                                      Meta.Window? window, Clutter.KeyEvent? event,
+                                      Meta.KeyBinding binding)
+    {
+        if (raven_proxy == null) {
+            warning("Raven does not appear to be running!");
+            return;
+        }
+
+        try {
+            raven_proxy.ReadNotifications.begin();
+        } catch (Error e) {
+            warning("Unable to ReadNotifications() Raven: %s", e.message);
+        }
+    }
+
     /* Set up the proxy when raven appears */
     void has_raven()
     {
@@ -435,6 +452,7 @@ public class BudgieWM : Meta.Plugin
         /* Custom keybindings */
         display.add_keybinding("toggle-raven", settings, Meta.KeyBindingFlags.NONE, on_raven_main_toggle);
         display.add_keybinding("toggle-notifications", settings, Meta.KeyBindingFlags.NONE, on_raven_notification_toggle);
+        display.add_keybinding("clear-notifications", settings, Meta.KeyBindingFlags.NONE, on_raven_clear_notifications);
         display.overlay_key.connect(on_overlay_key);
 
         /* Hook up Raven handler.. */

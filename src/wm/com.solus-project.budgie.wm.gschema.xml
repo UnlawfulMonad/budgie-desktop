@@ -37,6 +37,12 @@
       <description>The binding to use to toggle Raven notifications</description>
     </key>
 
+    <key type="as" name="clear-notifications">
+      <default><![CDATA[['<Super>C']]]></default>
+      <summary>The binding to use to clear Raven notifications</summary>
+      <description>The binding to use to clear Raven notifications</description>
+    </key>
+
     <key name="button-layout" type="s">
       <default>'appmenu:minimize,maximize,close'</default>
       <summary>Arrangement of buttons on the titlebar</summary>
