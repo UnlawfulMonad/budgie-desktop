@@ -505,7 +505,7 @@ public const int NOTIFICATION_SIZE = 400;
 [DBus (name = "org.freedesktop.Notifications")]
 public class NotificationsView : Gtk.Box
 {
-
+    private NotificationsClear? nc = null;
     string[] caps = {
         "body", "body-markup", "actions", "action-icons"
     };
@@ -688,7 +688,7 @@ public class NotificationsView : Gtk.Box
 
 
     [DBus (visible = false)]
-    void clear_all()
+    public void clear_all()
     {
         listbox.foreach((c)=> listbox.remove(c));
 
@@ -731,6 +731,7 @@ public class NotificationsView : Gtk.Box
         show_all();
         update_child_count();
 
+        nc = new NotificationsClear(this);
         serve_dbus();
     }
 
@@ -748,6 +749,43 @@ public class NotificationsView : Gtk.Box
     void serve_dbus()
     {
         Bus.own_name(BusType.SESSION, "org.freedesktop.Notifications",
+            BusNameOwnerFlags.NONE,
+            on_bus_acquired, null, null);
+    }
+}
+
+[DBus (name = "org.budgie_desktop.NotificationsClear")]
+class NotificationsClear {
+    private NotificationsView? nview;
+
+    [DBus (visible = false)]
+    public NotificationsClear(NotificationsView? nview)
+    {
+        this.nview = nview;
+        serve_dbus();
+    }
+
+    void Clear()
+    {
+        if(nview != null) {
+            nview.clear_all();
+        }
+    }
+
+    [DBus (visible = false)]
+    void on_bus_acquired(DBusConnection conn)
+    {
+        try {
+            conn.register_object("/org/freedesktop/NotificationsClear", this);
+        } catch (Error e) {
+            warning("Unable to register notification dbus: %s", e.message);
+        }
+    }
+
+    [DBus (visible = false)]
+    void serve_dbus()
+    {
+        Bus.own_name(BusType.SESSION, "org.freedesktop.NotificationsClear",
             BusNameOwnerFlags.NONE,
             on_bus_acquired, null, null);
     }
