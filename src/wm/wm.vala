@@ -76,6 +76,13 @@ public interface RavenRemote : Object
     public abstract async void Dismiss() throws Error;
 }
 
+[DBus (name = "org.budgie_desktop.NotificationsClear")]
+public interface NotifClearProxy : Object
+{
+    public abstract async void Clear() throws Error;
+}
+
+
 [DBus (name = "org.budgie_desktop.Panel")]
 public interface PanelRemote : Object
 {
@@ -149,6 +156,7 @@ public class BudgieWM : Meta.Plugin
     LoginDRemote? logind_proxy = null;
     MenuManager? menu_proxy = null;
     Switcher? switcher_proxy = null;
+    NotifClearProxy? nclear_proxy = null;
 
     Settings? iface_settings = null;
 
@@ -191,6 +199,15 @@ public class BudgieWM : Meta.Plugin
         }
     }
 
+    void on_nclear_get(GLib.Object? o, GLib.AsyncResult? res)
+    {
+        try {
+            nclear_proxy = Bus.get_proxy.end(res);
+        } catch (Error e) {
+            warning("Failed to get Notifications Clear proxy: %s", e.message);
+        }
+    }
+
     /* Obtain Panel manager */
     void on_panel_get(GLib.Object? o, GLib.AsyncResult? res)
     {
@@ -210,6 +227,13 @@ public class BudgieWM : Meta.Plugin
     {
         if (panel_proxy == null) {
             Bus.get_proxy.begin<PanelRemote>(BusType.SESSION, PANEL_DBUS_NAME, PANEL_DBUS_OBJECT_PATH, 0, null, on_panel_get);
+        }
+    }
+
+    void has_nclear()
+    {
+        if (nclear_proxy == null) {
+            Bus.get_proxy.begin<NotifClearProxy>(BusType.SESSION, PANEL_DBUS_NAME, PANEL_DBUS_OBJECT_PATH, 0, null, on_nclear_get);
         }
     }
 
@@ -272,6 +296,11 @@ public class BudgieWM : Meta.Plugin
         switcher_proxy = null;
     }
 
+    void lost_nclear()
+    {
+        nclear_proxy = null;
+    }
+
     void on_swicher_get(GLib.Object? o, GLib.AsyncResult? res)
     {
         try {
@@ -323,13 +352,13 @@ public class BudgieWM : Meta.Plugin
                                       Meta.Window? window, Clutter.KeyEvent? event,
                                       Meta.KeyBinding binding)
     {
-        if (raven_proxy == null) {
+        if (nclear_proxy == null) {
             warning("Raven does not appear to be running!");
             return;
         }
 
         try {
-            raven_proxy.ReadNotifications.begin();
+            nclear_proxy.Clear.begin();
         } catch (Error e) {
             warning("Unable to ReadNotifications() Raven: %s", e.message);
         }
@@ -470,6 +499,10 @@ public class BudgieWM : Meta.Plugin
         /* TabSwitcher */
         Bus.watch_name(BusType.SESSION, SWITCHER_DBUS_NAME, BusNameWatcherFlags.NONE,
             has_switcher, lost_switcher);
+
+        /* Notification clearer */
+        Bus.watch_name(BusType.SESSION, SWITCHER_DBUS_NAME, BusNameWatcherFlags.NONE,
+            has_nclear, lost_nclear);
 
         /* Keep an eye out for systemd stuffs */
         if (have_logind()) {
